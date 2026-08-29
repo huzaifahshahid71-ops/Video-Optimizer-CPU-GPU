@@ -5,7 +5,7 @@ from tkinter import filedialog, messagebox
 
 from video_optimizer_engine import (
     EncoderSettings, EncodingCancelled, VideoInfo, VIDEO_EXTENSIONS,
-    find_ffmpeg_pair, has_nvenc, install_ffmpeg, output_path_for,
+    find_ffmpeg_pair, ffmpeg_supports_nvenc, has_nvenc, install_ffmpeg, output_path_for,
     probe_video, encode_video,
 )
 
@@ -72,16 +72,16 @@ class ActionsMixin:
 
     def refresh_environment(self):
         ffmpeg,ffprobe=find_ffmpeg_pair()
-        nv=has_nvenc(ffmpeg) if ffmpeg else False
+        nvenc_build=ffmpeg_supports_nvenc(ffmpeg) if ffmpeg else False
         if ffmpeg and ffprobe:
-            self.encoder_status.set("NVENC ready" if nv else "CPU ready")
+            self.encoder_status.set("CPU ready")
             self.ffmpeg_detail.configure(
-                text=f"FFmpeg: {ffmpeg}\nFFprobe: {ffprobe}\nNVIDIA HEVC NVENC: {'Available' if nv else 'Not available'}"
+                text=f"FFmpeg: {ffmpeg}\nFFprobe: {ffprobe}\nNVENC in FFmpeg build: {'Yes' if nvenc_build else 'No'}\nGPU hardware is tested only when GPU/Auto encoding starts."
             )
         else:
             self.encoder_status.set("FFmpeg missing")
             self.ffmpeg_detail.configure(text="FFmpeg/FFprobe were not found. Use Install / Update FFmpeg below.")
-        return ffmpeg,ffprobe,nv
+        return ffmpeg,ffprobe,nvenc_build
 
     def install_ffmpeg_clicked(self):
         if self.encoding: return
@@ -122,8 +122,10 @@ class ActionsMixin:
             if messagebox.askyesno("FFmpeg required","FFmpeg is not installed. Open the FFmpeg page now?"):
                 self.show_page("FFmpeg")
             return
-        nv=has_nvenc(ffmpeg)
-        if self.encoder_mode.get()=="GPU" and not nv:
+        requested_mode=self.encoder_mode.get()
+        # CPU mode intentionally does not initialize/probe the NVIDIA GPU.
+        nv=has_nvenc(ffmpeg) if requested_mode in {"GPU","Auto"} else False
+        if requested_mode=="GPU" and not nv:
             messagebox.showerror("GPU encoder unavailable","GPU mode requires NVIDIA HEVC NVENC, but it is not available on this system.\n\nChoose CPU or Auto, or update your NVIDIA driver/FFmpeg build.")
             return
         self.encoding=True
