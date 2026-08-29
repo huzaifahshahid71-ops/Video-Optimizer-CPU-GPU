@@ -8,6 +8,7 @@ A modern Windows video optimizer that combines CPU x265 and NVIDIA NVENC hardwar
 - Uses `libx265`
 - Best compression efficiency / fine quality control
 - Useful when you deliberately want to avoid the NVIDIA dGPU
+- CPU mode does not initialize/probe NVENC hardware
 - Default: CRF 20, medium preset
 
 **GPU • NVIDIA NVENC**
