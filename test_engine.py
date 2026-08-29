@@ -26,6 +26,11 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(resolve_mode("Auto",True),"GPU")
         self.assertEqual(resolve_mode("Auto",False),"CPU")
 
+    def test_gui_startup_signature(self):
+        from video_optimizer_studio import VideoOptimizerApp
+        sig = inspect.signature(VideoOptimizerApp._set_windows_identity)
+        self.assertEqual(list(sig.parameters), ["self"])
+
     def test_cpu_and_gpu_quality_arguments_are_independent(self):
         cpu = EncoderSettings(mode="CPU", cpu_crf=23, gpu_cq=15)
         cmd, mode = build_ffmpeg_command("in.mp4","out.mp4",cpu,ffmpeg="ffmpeg",nvenc_available=True)
