@@ -198,8 +198,8 @@ def probe_video(path: str | Path, ffprobe: Optional[str] = None) -> VideoInfo:
     )
 
 
-def has_nvenc(ffmpeg: Optional[str] = None) -> bool:
-    """Return True only when HEVC NVENC can actually initialize on this machine."""
+def ffmpeg_supports_nvenc(ffmpeg: Optional[str] = None) -> bool:
+    """Check FFmpeg build support for HEVC NVENC without initializing the GPU."""
     ffmpeg_found, _ = find_ffmpeg_pair()
     ffmpeg = ffmpeg or ffmpeg_found
     if not ffmpeg:
@@ -210,11 +210,20 @@ def has_nvenc(ffmpeg: Optional[str] = None) -> bool:
             capture_output=True, text=True, timeout=15,
             creationflags=_no_window_flags(),
         )
-        if listed.returncode != 0 or "hevc_nvenc" not in listed.stdout:
-            return False
+        return listed.returncode == 0 and "hevc_nvenc" in listed.stdout
+    except Exception:
+        return False
 
+
+def has_nvenc(ffmpeg: Optional[str] = None) -> bool:
+    """Return True only when HEVC NVENC can actually initialize on this machine."""
+    ffmpeg_found, _ = find_ffmpeg_pair()
+    ffmpeg = ffmpeg or ffmpeg_found
+    if not ffmpeg or not ffmpeg_supports_nvenc(ffmpeg):
+        return False
+    try:
         # A build may list NVENC even when no compatible NVIDIA GPU/driver exists.
-        # Initialize a one-frame encode to verify that the hardware encoder is usable.
+        # Initialize a one-frame encode only when GPU/Auto is explicitly requested.
         test = subprocess.run(
             [
                 ffmpeg, "-hide_banner", "-loglevel", "error",
